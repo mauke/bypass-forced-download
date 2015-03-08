@@ -1,0 +1,186 @@
+#!/usr/bin/env perl
+use Defaults::Mauke 0.10;
+use Switch::Plain;
+use File::Open qw(fopen fopen_nothrow);
+use File::Find;
+use File::Path qw(make_path remove_tree);
+use File::Basename qw(dirname);
+use File::Copy qw(copy);
+use Data::Munge qw(list2re slurp);
+use JSON::MaybeXS ();
+
+use re '/xms';
+
+fun escape_xml($str) {
+    state $tr = {
+        '<' => '&lt;',
+        '>' => '&gt;',
+        '&' => '&amp;',
+    };
+    state $tr_re = list2re keys %$tr;
+    $str =~ s{ ($tr_re) }{$tr->{$1}}gr
+}
+
+fun non_comment_lines($fh) {
+    my @lines = grep !m{\A \s* (?: \# | \z)}, readline $fh;
+    chomp @lines;
+    @lines
+}
+
+fun overwrite($file, $data) {
+    my $tmp = "$file.tmp";
+    my $fh = fopen $tmp, 'w';
+    print $fh $data or die "$0: $tmp: $!\n";
+    close $fh or die "$0: $tmp; $!\n";
+    rename $tmp, $file or die "$0: $tmp -> $file: $!\n";
+}
+
+fun system_check(@args) {
+    system(@args) == 0 and return;
+    if ($? == -1) {
+        die "$0: system(): $!\n";
+    }
+    if (my $signo = $? & 127) {
+        require Config;
+        my %signame;
+        @signame{split ' ', $Config::Config{sig_num}} = split ' ', $Config::Config{sig_name};
+        die "$0: $args[0]: $signame{$signo}\n";
+    }
+    die "$0: $args[0]: ${\($? >> 8)}\n";
+}
+
+fun manifest_check() {
+    my @manifiles = non_comment_lines fopen 'MANIFEST';
+    my %manifiles_set;
+    @manifiles_set{@manifiles} = ();
+
+    my @maniskip;
+    if (my $fh = fopen_nothrow 'MANIFEST.SKIP') {
+        @maniskip = non_comment_lines $fh;
+    } elsif (!$!{ENOENT}) {
+        die "$0: MANIFEST.SKIP: $!\n";
+    }
+
+    my $maniskip_re =
+        !@maniskip
+            ? qr{\A (?!)}
+            : do {
+                my $tmp = join '|', map qr/(?-x)$_/, @maniskip;
+                qr{ $tmp }
+            };
+
+    for my $manifile (@manifiles) {
+        if ($manifile =~ $maniskip_re) {
+            die "$0: error: $manifile (in MANIFEST) is skipped by MANIFEST.SKIP\n";
+        }
+    }
+
+    my @files;
+    find {
+        no_chdir    => 1,
+        pre_process => fun (@entries) {
+            sort grep $_ ne '.' && $_ ne '..', @entries
+        },
+        wanted      => fun () {
+            my $name = $File::Find::name =~ s{\A \./ }{}r;
+            if ($name =~ $maniskip_re) {
+                $File::Find::prune = 1;
+                return;
+            }
+            push @files, $name unless -d $name;
+        },
+    }, '.';
+
+    my @extra;
+    for my $file (@files) {
+        if (exists $manifiles_set{$file}) {
+            delete $manifiles_set{$file};
+        } else {
+            push @extra, $file;
+        }
+    }
+    my @missing = keys %manifiles_set;
+
+    my $err = '';
+    if (@missing) {
+        $err .=
+            "$0: error: the following files listed in MANIFEST are missing:\n" .
+            join("", map "$_\n", @missing);
+    }
+    if (@extra) {
+        $err .=
+            "$0: error: the following files are not listed in MANIFEST:\n" .
+            join("", map "$_\n", @extra);
+    }
+
+    die $err if $err;
+
+    return @manifiles;
+}
+
+my %reversion = (
+    build            => fun ($major, $minor, $revision, $build) { $major, $minor, $revision, $build + 1 },
+    release_revision => fun ($major, $minor, $revision, $build) { $major, $minor, $revision + 1 },
+    release_minor    => fun ($major, $minor, $revision, $build) { $major, $minor + 1, 0 },
+    release_major    => fun ($major, $minor, $revision, $build) { $major + 1, 0, 0 },
+);
+
+my $reversion = $reversion{($ARGV[0] // '') =~ tr/-/_/r}
+    or die <<EOT;
+Usage: $0 {build|release-revision|release-minor|release-major}'
+EOT
+
+my @files = manifest_check;
+
+my $json = JSON::MaybeXS->new(relaxed => 1, pretty => 1);
+my $meta = $json->decode(slurp fopen 'META.json');
+
+my $ext_name = $meta->{name} // die qq{$0: META.json: "name" not specified\n};
+my $version_old = $meta->{version} // '0';
+my $version_new = join '.', $reversion->((split(m{ \. }, $version_old), (0) x 4)[0 .. 3]);
+
+if (-e '_build') {
+    if (-d _) {
+        remove_tree '_build';
+    } else {
+        unlink '_build' or die "$0: _build: $!\n";
+    }
+}
+mkdir '_build' or die "$0: _build: $!\n";
+
+for my $file (@files) {
+    if ($file eq 'install.rdf') {
+        my $contents = slurp fopen $file;
+        $contents =~ s{
+            \$\{ (?: ([^{}]*) \} )?
+        }{
+            my $var = $1;
+            if (!defined $var) {
+                my $line = substr($contents, 0, $-[0]) =~ tr/\n// + 1;
+                die "$0: $file:$line: unterminated '\$\{' directive\n";
+            }
+            my $r;
+            sswitch ($var) {
+                case '$':       { $r = '$'; }
+                case 'VERSION': { $r = $version_new; }
+                default: {
+                    my $line = substr($contents, 0, $-[0]) =~ tr/\n// + 1;
+                    die "$0: $file:$line: unknown variable '\${$var}'\n";
+                }
+            }
+            escape_xml $r
+        }eg;
+
+        print { fopen "_build/$file", 'w' } $contents;
+
+        next;
+    }
+
+    my $dir = '_build/' . dirname $file;
+    make_path $dir, { mode => 0644 };
+    copy $file, "_build/$file" or die "$0: _build/$file: $!\n";
+}
+
+system_check "cd _build && zip -r ../\Q$ext_name\E-\Q$version_new\E.xpi *";
+
+overwrite 'META.json', $json->encode({ %$meta, version => $version_new });
