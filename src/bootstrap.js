@@ -11,10 +11,13 @@ const observer = {
         switch (topic) {
             case http_on_examine_response: {
                 let chan = subject.QueryInterface(Ci.nsIHttpChannel);
-                let cd_old = chan.getResponseHeader('Content-Disposition');
-                let cd_new = cd_old.replace(/^\s*attachment(?![^\s;])/i, 'inline');
-                if (cd_old === cd_new) break;
-                chan.setResponseHeader('Content-Disposition', cd_new, /* merge: */ false);
+                try {
+                    let cd_old = chan.getResponseHeader('Content-Disposition');
+                    let cd_new = cd_old.replace(/^\s*attachment(?![^\s;])/i, 'inline');
+                    if (cd_old === cd_new) break;
+                    chan.setResponseHeader('Content-Disposition', cd_new, /* merge: */ false);
+                } catch (e) {
+                }
                 break;
             }
         }
