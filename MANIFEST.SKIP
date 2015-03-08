@@ -3,6 +3,5 @@
 ^MANIFEST$
 ^MANIFEST\.SKIP$
 ^META\.json$
-^VERSION$
 ^_build$
 ^bypass-forced-download-.*\.xpi$
