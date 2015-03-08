@@ -13,8 +13,9 @@
         <em:maxVersion>36.0</em:maxVersion>
       </Description>
     </em:targetApplication>
-    <em:name>Bypass Forced Download</em:name>
     <em:bootstrap>true</em:bootstrap>
+    <em:name>Bypass Forced Download</em:name>
+    <em:description>Remove "Content-Disposition: attachment"</em:description>
     <em:creator>Lukas Mai</em:creator>
   </Description>
 </RDF>
