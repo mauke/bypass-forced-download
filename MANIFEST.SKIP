@@ -1,5 +1,6 @@
 ^pak$
 ^\.git
+^\..*\.swp$
 ^MANIFEST$
 ^MANIFEST\.SKIP$
 ^META\.json$
