@@ -181,6 +181,8 @@ for my $file (@files) {
     copy $file, "_build/$file" or die "$0: _build/$file: $!\n";
 }
 
-system_check "cd _build && zip -r ../\Q$ext_name\E-\Q$version_new\E.xpi *";
+my $xpi_file = "$ext_name-$version_new.xpi";
+system_check "cd _build && zip -q -r ../\Q$xpi_file\E *";
+say $xpi_file;
 
 overwrite 'META.json', $json->encode({ %$meta, version => $version_new });
