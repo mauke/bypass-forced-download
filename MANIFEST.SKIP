@@ -5,4 +5,5 @@
 ^MANIFEST\.SKIP$
 ^META\.json$
 ^_build$
+^xpi$
 ^bypass-forced-download-.*\.xpi$

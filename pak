@@ -139,14 +139,21 @@ my $ext_name = $meta->{name} // die qq{$0: META.json: "name" not specified\n};
 my $version_old = $meta->{version} // '0';
 my $version_new = join '.', $reversion->((split(m{ \. }, $version_old), (0) x 4)[0 .. 3]);
 
-if (-e '_build') {
+my $_build = '_build';
+
+if (-e $_build) {
     if (-d _) {
-        remove_tree '_build';
+        remove_tree $_build;
     } else {
-        unlink '_build' or die "$0: _build: $!\n";
+        unlink $_build or die "$0: $_build: $!\n";
     }
 }
-mkdir '_build' or die "$0: _build: $!\n";
+mkdir $_build or die "$0: $_build: $!\n";
+
+my $xpi = 'xpi';
+if (!-d $xpi) {
+    mkdir $xpi or die "$0: $xpi: $!\n";
+}
 
 for my $file (@files) {
     if ($file eq 'install.rdf') {
@@ -171,18 +178,18 @@ for my $file (@files) {
             escape_xml $r
         }eg;
 
-        print { fopen "_build/$file", 'w' } $contents;
+        print { fopen "$_build/$file", 'w' } $contents;
 
         next;
     }
 
-    my $dir = '_build/' . dirname $file;
+    my $dir = "$_build/" . dirname $file;
     make_path $dir, { mode => 0644 };
-    copy $file, "_build/$file" or die "$0: _build/$file: $!\n";
+    copy $file, "$_build/$file" or die "$0: $_build/$file: $!\n";
 }
 
 my $xpi_file = "$ext_name-$version_new.xpi";
-system_check "cd _build && zip -q -r ../\Q$xpi_file\E *";
-say $xpi_file;
+system_check "cd \Q$_build\E && zip -q -r ../\Q$xpi\E/\Q$xpi_file\E *";
+say "$xpi/$xpi_file";
 
 overwrite 'META.json', $json->encode({ %$meta, version => $version_new });
