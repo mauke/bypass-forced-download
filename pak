@@ -78,7 +78,7 @@ fun manifest_check() {
     my @files;
     find {
         no_chdir    => 1,
-        pre_process => fun (@entries) {
+        preprocess => fun (@entries) {
             sort grep $_ ne '.' && $_ ne '..', @entries
         },
         wanted      => fun () {
