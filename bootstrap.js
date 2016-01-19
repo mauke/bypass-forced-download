@@ -15,10 +15,10 @@ const me = {
 
     blacklist_pattern: /^(?!)/,
     update_pattern: function () {
-        let blacklist = this.branch.getCharPref(MY_PREF_BLACKLIST);
-        let words = blacklist.match(/\S+/g) || [];
-        let anychar = '\\w';
-        let words_trans = words.map(
+        const blacklist = this.branch.getCharPref(MY_PREF_BLACKLIST);
+        const words = blacklist.match(/\S+/g) || [];
+        const anychar = '\\w';
+        const words_trans = words.map(
             function (s)
                 s.replace(/([*?]+)|\W/g,
                     function (m0, m1)
@@ -26,7 +26,7 @@ const me = {
                         '\\' + m0
                 )
         );
-        let combined = (
+        const combined = (
             words_trans.length
                 ? '(?:' + words_trans.join('|') + ')'
                 : '(?!)'
@@ -37,16 +37,17 @@ const me = {
     observe: function (subject, topic, data) {
         switch (topic) {
             case http_on_examine_response: {
-                let chan = subject.QueryInterface(Ci.nsIHttpChannel);
-                let host;
-                try {
-                    host = chan.URI.asciiHost;
-                } catch (e) {
-                }
+                const chan = subject.QueryInterface(Ci.nsIHttpChannel);
+                const host = function () {
+                    try {
+                        return chan.URI.asciiHost;
+                    } catch (e) {
+                    }
+                }();
                 if (host && this.blacklist_pattern.test(host)) break;
                 try {
-                    let cd_old = chan.getResponseHeader('Content-Disposition');
-                    let cd_new = cd_old.replace(/^\s*attachment(?![^\s;])/i, 'inline');
+                    const cd_old = chan.getResponseHeader('Content-Disposition');
+                    const cd_new = cd_old.replace(/^\s*attachment(?![^\s;])/i, 'inline');
                     if (cd_old === cd_new) break;
                     chan.setResponseHeader('Content-Disposition', cd_new, /* merge: */ false);
                 } catch (e) {
@@ -67,7 +68,7 @@ const me = {
 };
 
 function startup(data, reason) {
-    let default_prefs = Services.prefs.getDefaultBranch(MY_PREF_BRANCH);
+    const default_prefs = Services.prefs.getDefaultBranch(MY_PREF_BRANCH);
     default_prefs.setCharPref(MY_PREF_BLACKLIST, 'cf-media.sndcdn.com download*.mediafire.com');
 
     me.branch = Services.prefs.getBranch(MY_PREF_BRANCH);
