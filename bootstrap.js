@@ -69,7 +69,7 @@ const me = {
 
 function startup(data, reason) {
     let default_prefs = Services.prefs.getDefaultBranch(MY_PREF_BRANCH);
-    default_prefs.setCharPref(MY_PREF_BLACKLIST, '');
+    default_prefs.setCharPref(MY_PREF_BLACKLIST, 'cf-media.sndcdn.com download*.mediafire.com');
 
     me.branch = Services.prefs.getBranch(MY_PREF_BRANCH);
     me.branch.addObserver('', me, /* weak: */ false);
