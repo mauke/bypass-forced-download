@@ -1,0 +1,26 @@
+{
+    "manifest_version": 2,
+    "name": "Bypass Forced Download",
+    "description": "Remove \"Content-Disposition: attachment\"",
+    "author": "Lukas Mai",
+    "version": "${VERSION}",
+    "permissions": [
+        "*://*/*",
+        "storage",
+        "webRequest",
+        "webRequestBlocking"
+    ],
+    "background": {
+        "scripts": ["background.js"]
+    },
+    "options_ui": {
+        "browser_style": true,
+        "page": "options.html"
+    },
+    "applications": {
+        "gecko": {
+            "id": "bypass-forced-download@lukas-mai.addons.mozilla.org",
+            "strict_min_version": "48.0"
+        }
+    }
+}

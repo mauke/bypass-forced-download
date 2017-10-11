@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+<style>
+form { display: table; }
+form > p { display: table-row; }
+form > p > * { display: table-cell; }
+form > p > label { padding-right: 1em; }
+.note { font-size: smaller; }
+</style>
+    </head>
+
+    <body>
+        <form id="options" autocomplete="off">
+            <p>
+                <label for="whitelist">Hosts to run on:</label>
+                <input type="text" id="whitelist" size=40 disabled>
+            </p>
+            <p>
+                <label for="blacklist">... except for:</label>
+                <input type="text" id="blacklist" size=40 disabled>
+            </p>
+            <p>
+                <span></span>
+                <span class="note">Space-separated list of host names; <code>*</code> and <code>?</code> are supported wildcards</span>
+            </p>
+            <input type="submit" id="save" value="Save" disabled>
+        </form>
+
+        <script src="options.js"></script>
+    </body>
+</html>

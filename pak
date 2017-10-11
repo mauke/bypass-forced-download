@@ -127,7 +127,7 @@ my %reversion = (
 
 my $reversion = $reversion{($ARGV[0] // '') =~ tr/-/_/r}
     or die <<EOT;
-Usage: $0 {build|release-revision|release-minor|release-major}'
+Usage: $0 {build|release-revision|release-minor|release-major}
 EOT
 
 my @files = manifest_check;
@@ -156,7 +156,7 @@ if (!-d $xpi) {
 }
 
 for my $file (@files) {
-    if ($file eq 'install.rdf') {
+    if ($file eq 'manifest.json') {
         my $contents = slurp fopen $file;
         $contents =~ s{
             \$\{ (?: ([^{}]*) \} )?
